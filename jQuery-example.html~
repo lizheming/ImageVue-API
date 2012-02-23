@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"> 
+<html xml:lang="fr" xmlns="http://www.w3.org/1999/xhtml"><head>
+
+ 
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+
+        <title></title>         
+
+<style>
+body {
+        background-color:#E9E9E9;
+        color:#333333;
+        font-family:'Microsoft YaHei','Lucida handwriting',Arial,Helvetica,sans-serif;
+        font-size:10pt;
+        margin:0;
+        padding:0;
+        text-shadow: 0px 0px 1px #999;
+        -webkit-text-size-adjust:none;
+}
+
+a,a:hover {
+        color:#333333;
+        text-decoration:none;
+}
+
+
+.photo, .album {
+        display:inline-block;
+        margin:5px;
+        padding:10px 0;
+        float:left;
+    position: relative;
+        text-align:center;
+    background-color: #fff;
+    border: 1px solid #eee;
+        -webkit-box-shadow:2px 2px 3px rgba(135,139,144,0.4);
+        -moz-box-shadow:2px 2px 3px rgba(135,139,144,0.4);
+        box-shadow:2px 2px 3px rgba(135,139,144,0.4);
+}
+
+.photo:before, album:before {
+    -webkit-transform: skew(-25deg) rotate(-6deg);
+    -moz-transform: skew(-25deg) rotate(-6deg);
+    transform: skew(-25deg) rotate(-6deg);
+    left: 27px;
+    width: 70%;
+    height: 35%;
+    content: ' ';
+    -webkit-box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    -moz-box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    position: absolute;
+    bottom: 7px;
+    z-index: -1;
+}
+
+.album img {
+        width:120px;
+}
+
+.img_title {
+        margin:auto;
+        display:block;
+        width:160px;
+        height:17px;
+        overflow: hidden;
+}
+
+.img_date {
+        margin:2px auto 0 auto;
+        display:block;
+        width:160px;
+        height:17px;
+        overflow: hidden;
+        color:#888;
+}
+
+#back {
+        display:inline-block;
+        margin:5px;
+        padding:10px;
+        float:left;
+    position: relative;
+        text-align:center;
+    background-color: #fff;
+    border: 1px solid #eee;
+        -webkit-box-shadow:2px 2px 3px rgba(135,139,144,0.4);
+        -moz-box-shadow:2px 2px 3px rgba(135,139,144,0.4);
+        box-shadow:2px 2px 3px rgba(135,139,144,0.4);
+        display: none;
+}
+
+#back:hover {
+    background-color: #ccc;
+}
+
+</style>
+        
+</head><body> 
+        
+
+
+                <div id="images" style="background-position: 0px 0px;"> 
+                        <a id="back">BACK</a>
+                </div>
+
+                
+        <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+        <script type="text/javascript">
+var albumURL = 'http://album.imnerd.org/';
+
+$(function(){
+
+
+
+        $.getJSON(albumURL + 'api.php?method=get.gallery.name&callback=?', function(data){
+                $.each(data, function(i,item){
+
+                        $.getJSON(albumURL + 'api.php?method=get.gallery.info&name=' + item + '&callback=?', function(data){
+                                                $('<a class="album"/>').attr('href', 'javascript:openAlbum("' + data.name + '")').attr('title', data.description)
+                                                        .append('<img/>').children().eq(0)
+                                                        //.attr("src", albumURL + data.path + data.previewimage)
+                                                        .attr("src", albumURL + data.path + 'tn_' + data.previewimage.substr(0,data.previewimage.length-3) + 'jpg')
+                                                        //.css('width', data.maxThumbWidth)
+                                                        .parent()
+                                                        .append('<span/>').children().eq(1).addClass('img_title').html(data.title).parent()
+                                                        .append('<span/>').children().eq(2).addClass('img_title').html('共 ' + data.fileCount + ' 张').parent()
+                                                        .append('<span/>').children().eq(3).addClass('img_date').html(getLocalTime(data.mTime)).parent()
+                                                        .appendTo('#images');
+                        });
+                });
+        });
+
+        $('#back').click(function(){
+                //$('#images').children('a:visible').hide();
+                $('.photo').remove();
+                //$('#images').children('a:hidden').fadeIn();
+                $('.album').show();
+                $(this).hide();
+        });
+
+});     
+
+        function openAlbum(albumName) {
+                //$('#images').children('a').fadeOut();
+                $('.album').hide();
+                $('#back').show();
+                $.getJSON(albumURL + 'api.php?method=get.photos&name=' + albumName + '&callback=?', function(data){
+                        $.each(data, function(i,item){
+                                $("<a class='photo'/>").attr('href', item.url).attr('title', item.description)
+                                        .append('<img/>').children().attr("src", item.thumbnail).parent()
+                                        .append('<span/>').children().eq(1).addClass('img_title').html(item.title).parent()
+                                        .appendTo('#images');
+                        });
+                });
+        }
+        
+        function getLocalTime(nS) {
+                return new Date(parseInt(nS) * 1000).toLocaleString();
+        }
+        </script>
+
+
+</body></html>
+
