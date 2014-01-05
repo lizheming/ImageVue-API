@@ -1,198 +1,182 @@
 <?php
-  error_reporting(E_ALL ^ E_NOTICE);
-	function format($data) {
-	  if(isset($_GET['callback'])) {
-	    return $_GET['callback'] . '(' . json_encode($data) . ')';          
-	  } else {
-	    return json_encode($data);
-	  } 
+//error_reporting(E_ALL ^ E_NOTICE);
+function format($data) {
+	return isset($_GET['callback']) ? $_GET['callback'].'('.json_encode($data).')' : json_encode($data);
+}
+
+function _GET($var) {
+	return isset($_GET[$var]) ? $_GET[$var] : '';
+}
+
+function get_folder($folder, $start, $max) {
+	$gallery = array();
+	$temp = array();
+	$tmp = array();
+	foreach($folder as $item) {
+		if($item['page'] == 'gallery' && $item['hidden'] != true && $item['password'] == '') {
+			$temp = get_object_vars($item);
+			$gallery[$temp['@attributes']['name']] = $temp['@attributes'];
+			if(isset($item->folder)) {
+				$temp = get_object_vars($item->folder);
+				$gallery[$temp['@attributes']['name']] = $temp['@attributes'];
+			}
+		}
 	}
-	function get_folder($folder, $start, $max) {
-		$gallery = array();
-		$temp = array();
-		$tmp = array();
-	  foreach($folder as $item) {
-		  if($item['page'] == 'gallery' && $item['hidden'] != 'true' && $item['password'] == '') {
-		    $temp = get_object_vars($item);
-		    $gallery[$temp['@attributes']['name']] = $temp['@attributes'];
-		    if(isset($item -> folder)) {
-		      $temp = get_object_vars($item-> folder);
-		      $gallery[$temp['@attributes']['name']] = $temp['@attributes'];
-		    }
-		  }
-	  }		
-	  if($start != '' && $max != '') {
-	  	$album = array();
-	  	foreach($gallery as $item) {
-	  	  $album[] = $item;	
-	  	}
-	    for($i=$start;$i < $start+$max;$i++) {
-	      $tmp[$album[$i]['name']] = $album[$i];	
-	    }	
-	    $gallery = $tmp;
-	  }
-	  return $gallery;
+	if($start != '' && $max != '') {
+		$album = array();
+		foreach($gallery as $item) {
+			$album[] = $item;
+		}
+		for($i=$start,$l=$start+$max;$i<$l;$i++) {
+			$tmp[$album[$i]['name']] = $album[$i];
+		}
+		$gallery = $tmp;
 	}
-  if(!isset($_GET['method'])) $_GET['method'] = '';
-  //»ñÈ¡´æ·ÅÍ¼Æ¬ÎÄ¼ş¼Ğ
-  $xml = simplexml_load_file('./iv-includes/include/config.xml');
-  $picdir  = $xml-> imagevue-> settings-> contentfolder;
-  //µÃµ½ÍøÕ¾µØÖ·
-  $website = "http://".$_SERVER['HTTP_HOST'].str_replace("api2.php","",$_SERVER["SCRIPT_NAME"]);
-  switch($_GET['method']) {
-  	case 'get.gallery.name':
-  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-  	  if(!isset($_GET['start-index'])) $_GET['start-index'] = '';
-  	  if(!isset($_GET['max-results'])) $_GET['max-results'] = '';
-  	  $gallery = get_folder($xml-> folder-> folder, $_GET['start-index'], $_GET['max-results']);
-  	  $album = array();
-  	  foreach($gallery as $item) {
-  	    $album[] = $item['name'];	
-  	  }
-  	  echo format($album);
-  	  break;
-    
-    /*»ñÈ¡Ä³Ò»Ïà²áµÄÏà²áĞÅÏ¢*/ 
-  	case 'get.gallery.info':
-      //ÅĞ¶ÏÊÇ·ñ´æÔÚ¸ÃÏà²á//Èô²»´æÔÚÔò·µ»Øfalse
-  	  if(!isset($_GET['name'])) {
-  	    echo format('false');	
-  	  } else {
-	  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-	  	  $gallery = get_folder($xml-> folder-> folder, '', '');
-	  	  if(!isset($gallery[$_GET['name']])){
-	  	    echo format('false');	
-	  	  } else {
-	  	    echo format($gallery[$_GET['name']]);
-	  	  }
-  	  }
-  	  break;
-  	
-    /*»ñÈ¡ÌØ¶¨Ïà²áÏÂµÄËùÓĞÏàÆ¬*/
-    case 'get.photos':
-      //ÅĞ¶ÏÊÇ·ñ´æÔÚ¸ÃÏà²á//Èô²»´æÔÚÔò·µ»Øfalse
-  	  if(!isset($_GET['name'])) {
-  	    echo format('false');	
-  	  } else {
-	  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-	  	  $gallery = get_folder($xml-> folder-> folder, '', '');
-	  	  if(!isset($gallery[$_GET['name']])){
-	  	    echo format('false');	
-	  	  } else {
-	  	    $path = $gallery[$_GET['name']]['path'];
-	  	    $xml = simplexml_load_file($path . 'folderdata.xml');
-	  	    $photos = array();
-          /*·Ö±ğµÃµ½ÓĞÉèÖÃÆğÊ¼½á¹ûºÍÎŞÆğÊ¼½á¹ûµÄÖµ*/
-	  	    if(!isset($_GET['start-index']) OR !isset($_GET['max-results'])) {
-		  	    foreach($xml->file as $item) {
-		  	      $temp = get_object_vars($item);
-		  	      $photo = $temp['@attributes'];
-		  	      $photo['file'] = $photo['name'];
-              //×Ô¶¨ÒåÔö¼ÓÔ­Í¼¾ø¶ÔµØÖ·
-		  	      $photo['url'] = $website . $path . $photo['file'];
-              //×Ô¶¨ÒåÔö¼ÓËõÂÔÍ¼¾ø¶ÔµØÖ·
-		  	      $photo['thumbnail'] = $website . $path . 'tn_' . substr($photo['file'], 0, -3) . 'jpg';
-		  	      $photos[] = $photo;
-		  	    }
-	  	    } else {
-	  	      $start = $_GET['start-index'];
-	  	      $end = $start + $_GET['max-results'];
-	  	      for($i=$start;$i< $end;$i++) {
-	  	      	$item = $xml->file[$i-1];
-	  	        $temp = get_object_vars($item);	
-		  	      $photo = $temp['@attributes'];
-		  	      $photo['file'] = $photo['name'];
-              //×Ô¶¨ÒåÔö¼ÓÔ­Í¼¾ø¶ÔµØÖ·
-		  	      $photo['url'] = $website . $path . $photo['file'];
-              //×Ô¶¨ÒåÔö¼ÓËõÂÔÍ¼¾ø¶ÔµØÖ·
-		  	      $photo['thumbnail'] = $website . $path . 'tn_' . substr($photo['file'], 0, -3) . 'jpg';
-		  	      $photos[] = $photo;
-	  	      }	
-	  	    }
-	  	    echo format($photos);
-	  	  }
-	  	}
-	  	break;
- 
-    /*»ñÈ¡Í¼Æ¬ĞÅÏ¢*/
-    case 'get.photo':
-        if(!isset($_GET['album']) OR !isset($_GET['photo'])) {
-          echo format('false');	
-        } else {
-		  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-		  	  $gallery = get_folder($xml-> folder-> folder, '', '');
-	  	    $path = $gallery[$_GET['album']]['path'];
-	  	    $xml = simplexml_load_file($path . 'folderdata.xml');
-	  	    foreach($xml->file as $item) {
-	  	      if($item['name'] == $_GET['photo']) {
-		  	      $temp = get_object_vars($item);
-		  	      $photo = $temp['@attributes'];
-		  	      $photo['file'] = $photo['name'];
-              //×Ô¶¨ÒåÔö¼ÓÔ­Í¼¾ø¶ÔµØÖ·
-		  	      $photo['url'] = $website . $path . $photo['file'];
-              //×Ô¶¨ÒåÔö¼ÓËõÂÔÍ¼¾ø¶ÔµØÖ·
-		  	      $photo['thumbnail'] = $website . $path . 'tn_' . substr($photo['file'], 0, -3) . 'jpg';
-	  	      }	
-	  	    }
-	  	    echo format($photo);
-        }
-      break;
-    /*»ñÈ¡Ä³Ïà²áµÄÎÄ¼ş×ÜÊı//²»°üÀ¨ÎÄ¼ş¼Ğ*/
-    case 'get.gallery.filecount':
-      //ÅĞ¶ÏÊÇ·ñ´æÔÚ¸ÃÏà²á//Èô²»´æÔÚÔò·µ»Øfalse
-  	  if(!isset($_GET['name'])) {
-  	    echo format('false');	
-  	  } else {
-	  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-	  	  $gallery = get_folder($xml-> folder-> folder, '', '');
-	  	  if(!isset($gallery[$_GET['name']])){
-	  	    echo format('false');	
-	  	  } else {
-	  	  	echo format($gallery[$_GET['name']]['totalFileCount']);
-	  	  }
-	  	}
-	  	break;
-	  	
-    /*»ñÈ¡Ïà²áµÄ×÷ÓÃÊôĞÔ*/         
-    case 'get.gallery.page':
-      //ÅĞ¶ÏÊÇ·ñ´æÔÚ¸ÃÏà²á//Èô²»´æÔÚÔò·µ»Øfalse
-  	  if(!isset($_GET['name'])) {
-  	    echo format('false');	
-  	  } else {
-	  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-	  	  $gallery = get_folder($xml-> folder-> folder, '', '');
-	  	  $page = $gallery[$_GET['name']]['page'];
-	  	  echo format($page);
-      }
-    break;
-    
-    /*»ñÈ¡Ä³Ïà²áµÄ¸¸Ïà²á//ÈôÎª×ÓÏà²áÔò·µ»ØÉÏÒ»¼¶¸¸Ïà²áÈô±¾ÉíÊÇ¸¸Ïà²áÔò·µ»Øfalse*/
-    case 'get.gallery.parent':
-      //ÅĞ¶ÏÊÇ·ñ´æÔÚ¸ÃÏà²á//Èô²»´æÔÚÔò·µ»Øfalse
-  	  if(!isset($_GET['name'])) {
-  	    echo format('false');	
-  	  } else {
-	  	  $xml = simplexml_load_file($picdir . 'folders.xml');
-	  	  $gallery = get_folder($xml-> folder-> folder, '', '');
-        $folder = explode('/', $gallery[$_GET['name']]['path']);
-        $search = array(substr($picdir, 0, -1), $_GET['name'], '');
-        foreach($search as $item) {
-          $k = array_search($item,$folder);
-          unset($folder[$k]);
-        }
-        if($folder != '' && $folder != NULL) {
-          echo format($folder[count($folder)]);
-        } else {
-          echo format('false');	
-        }
-      }
-    break;
-  	default:
-      if(!isset($_GET['method'])) {
-        echo 'Welcome to ImageVue API Page, it made by <a href="http://imnerd.org">Austin</a>.';
-      } else {
-        echo 'oops!The method API is not supported now.Maybe you can email <a href="mailto:i@imnerd.org">author</a> to update it!';
-      }
-  	  break;
-  }
+	return $gallery;
+}
+
+//è·å–å­˜æ”¾å›¾ç‰‡æ–‡ä»¶å¤¹
+$xml = simplexml_load_file('./iv-includes/include/config.xml');
+$picdir  = $xml-> imagevue-> settings-> contentfolder;
+$xml = simplexml_load_file($picdir.'folders.xml');
+$gallery = get_folder($xml->folder->folder, _GET('start-index'), _GET('max-results'));
+
+//å¾—åˆ°ç½‘ç«™åœ°å€
+define('URL', "http://".$_SERVER['HTTP_HOST'].str_replace("api.php","",$_SERVER["SCRIPT_NAME"]));
+
+switch(_GET('method')) {
+	
+	/**
+	 * è·å–æ‰€æœ‰çš„ç›¸å†Œ
+	 *
+	 * @param string get.gallery.name APIåç§°
+	 * @param string start-index ç›¸å†Œèµ·å§‹å·
+	 * @param string max-results è¿”å›ç»“æœæœ€å¤§æ•°é‡
+	 * @return è¿”å›æ‰€æœ‰çš„ç›¸å†Œçš„æ–‡ä»¶å¤¹åç§°
+	 */
+	case 'get.gallery.name':
+		$album = array();
+		foreach($gallery as $item) 
+			$album[] = $item['name'];
+		echo format($album);
+	break;
+
+	/**
+	 * è·å–æŸä¸€ç›¸å†Œæ–‡ä»¶å¤¹çš„å…·ä½“ä¿¡æ¯
+	 *
+	 * @param string get.gallery.info APIåç§°
+	 * @param string name ç›¸å†Œæ–‡ä»¶å¤¹åç§°
+	 * @return è¿”å›è¯¥ç›¸å†Œæ–‡ä»¶å¤¹çš„å…·ä½“ä¿¡æ¯
+	 */
+	case 'get.gallery.info':
+		$name = _GET('name');
+		$res = isset($gallery[$name]) ? $gallery[$name] : 'false';
+		echo format($res);
+	break;
+
+	/**
+	 * è·å–ç›¸å†Œæ–‡ä»¶å¤¹å†…çš„æ‰€æœ‰ç…§ç‰‡
+	 *
+	 * @param string get.photos APIåç§°
+	 * @param string name ç›¸å†Œæ–‡ä»¶å¤¹åç§°
+	 * @return è¿”å›è¯¥ç›¸å†Œæ–‡ä»¶å¤¹å†…çš„æ‰€æœ‰ç…§ç‰‡
+	 */
+	case 'get.photos':
+		$name = _GET('name');
+		if(!isset($gallery[$name])) die(format('false'));
+		$path = $picdir.$gallery[$name]['path'];
+		$xml = simplexml_load_file($path.'folderdata.xml');
+		$photos = array();
+		$start_index = isset($_GET['start-index']) ? $_GET['start-index'] : 1;
+		$max_result = isset($_GET['max-result']) ? $_GET['max-result'] : count($xml->file);
+		for($i=$start_index-1, $end = $start_index+$max_result-1; $i<$end; $i++) {
+			$temp = get_object_vars($xml->file[$i]);
+			$photo = $temp['@attributes'];
+			$photo['file'] = $photo['name'];
+			$photo['url'] = URL.$path.$photo['file'];
+			$photo['thumbnail'] = URL.$path.'tn_'.substr($photo['file'],0,-3).'jpg';
+			$photos[] = $photo;
+		}
+		echo format($photos);
+	break;
+
+	/**
+	 * è·å–å•å¼ å›¾ç‰‡å…·ä½“ä¿¡æ¯
+	 *
+	 * @param string get.photo APIåç§°
+	 * @param string album å›¾ç‰‡æ‰€åœ¨ç›¸å†Œæ–‡ä»¶å¤¹åç§°
+	 * @param string photo å›¾ç‰‡æ–‡ä»¶å
+	 * @return string è¿”å›è¯¥å›¾ç‰‡çš„å…·ä½“ä¿¡æ¯
+	 */
+	case 'get.photo':
+		if(!isset($_GET['album']) || !isset($_GET['photo'])) die(format('false'));
+		$album = $_GET['album'];
+		$photo_name = $_GET['photo'];
+
+		$path = $picdir.$gallery[$album]['path'];
+		$xml = simplexml_load_file($picdir.$path.'folderdata.xml');
+		$photo = 'false';
+		foreach($xml->file as $item) {
+			if($item['name'] != $photo_name) continue;
+			$temp = get_object_vars($item);
+			$photo = $temp['@attributes'];
+			$photo['file'] = $photo['name'];
+			$photo['url'] = URL.$picdir.$path.$photo['file'];
+			$photo['thumbnail'] = URL.$picdir.$path.'tn_'.$photo['file'];
+			break;
+		}
+		echo format($photo);
+	break;
+
+	/**
+	 * è·å–è¯¥ç›¸å†Œæ–‡ä»¶å¤¹å†…çš„å›¾ç‰‡æ€»æ•°
+	 *
+	 * @param string get.gallery.filecount APIåç§°
+	 * @param string name ç›¸å†Œæ–‡ä»¶å¤¹åç§°
+	 * @return è¿”å›ç›¸å†Œæ–‡ä»¶å¤¹å†…çš„å›¾ç‰‡æ€»æ•°
+	 */
+	case 'get.gallery.filecount':
+		if(!isset($_GET['name'])) die(format('false'));
+		$name = $_GET['name'];
+		echo format( isset($gallery[$name]) ? $gallery[$name]['totalFileCount'] : 'false' );
+	break;
+
+	/**
+	 * è·å–è¯¥ç›¸å†Œæ–‡ä»¶å¤¹çš„ä½œç”¨å±æ€§
+	 *
+	 * @param string get.gallery.page APIåç§°
+	 * @param string name ç›¸å†Œæ–‡ä»¶å¤¹åç§°
+	 * @param è¿”å›ç›¸å†Œæ–‡ä»¶å¤¹çš„å±æ€§
+	 */
+	case 'get.gallery.page':
+		if(!isset($_GET['name'])) die(format('false'));
+		$name = $_GET['name'];
+		$page = $gallery[$name]['page'];
+		echo format($page);
+	break;
+
+	/**
+	 * è·å–ç›¸å†Œæ–‡ä»¶å¤¹çš„çˆ¶æ–‡ä»¶å¤¹åç§°
+	 *
+	 * @param string get.gallery.parent APIåç§°
+	 * @param string name ç›¸å†Œæ–‡ä»¶å¤¹çš„åç§°
+	 * @return è¿”å›ç›¸å†Œæ–‡ä»¶å¤¹çš„çˆ¶æ–‡ä»¶å¤¹åç§°
+	 */
+	case 'get.gallery.parent':
+		if(!isset($_GET['name'])) die(format('false'));
+		$name = $_GET['name'];
+
+		$folder = explode('/', $gallery[$name]['path']);
+		$search = array(substr($picdir, 0, -1), $name, '');
+		foreach($search as $item) {
+			$k = array_search($item, $folder);
+			unset($folder[$k]);
+		}
+		echo format( $folder == null ? 'false' : $folder[count($folder)] );
+	break;
+
+	default:
+		echo 'è¿™æ˜¯ä¸€ä¸ªImageVueçš„APIæ¥å£æ–‡ä»¶ï¼Œç”±<a href="http://imnerd.org">å…¬å­</a>å…¨ç¨‹åˆ¶ä½œã€‚ä½ çœ‹åˆ°è¿™æ®µè¯çš„åŸå› æ˜¯ä½ æ²¡æœ‰å®šä¹‰æ¥å£åç§°æˆ–è€…ä½ å®šä¹‰çš„æ¥å£APIæ–‡ä»¶æš‚æ—¶ä¸æ”¯æŒï¼Œå¦‚æœä½ å¯¹è¿™ä¸ªæ¥å£æœ‰éœ€æ±‚è¯·è”ç³»<a href="mailto:i@imnerd.org">å…¬å­</a>';
+	break;
+}
 ?>
